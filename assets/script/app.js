@@ -13,37 +13,97 @@ canvas.width = width;
 canvas.height = height;
 let ctx = canvas.getContext('2d');
 
+let scale = 1;
+let currentZoom = 1;
+let centerView = {'x' : width/2, 'y' : height/2};
+let originX = -width, originY = -height;
+
+canvas.addEventListener('click', function(e) {
+    originX -= e.clientX;
+    originY -= e.clientY;
+    ctx.translate(
+        centerView['x'] - e.clientX,
+        centerView['y'] - e.clientY
+    );
+})
+
+canvas.addEventListener('mousewheel', function(e) {
+    if (e['deltaY'] === -100) {
+        console.log('zoom in');
+    }
+    if (e['deltaY'] === 100) {
+        console.log('zoom out');
+    }
+})
+
+/*canvas.onmousewheel = function (event) {
+    let wheel = event.wheelDelta/120;//n or -n
+    let zoom = 0;
+    if(wheel < 0)
+    {
+        zoom = 1/2;
+        if(currentZoom == 1)
+            return;
+    }
+    else
+    {
+        mouseX = event.clientX - canvas.offsetLeft;
+        mouseY = event.clientY - canvas.offsetTop;
+        zoom = 2;
+        if(currentZoom == 32)
+            return;
+    }
+    currentZoom *= zoom;
+    ctx.translate(
+        centerView['x'],
+        centerView['y']
+    );
+    ctx.scale(zoom,zoom);
+    ctx.translate(
+        -( mouseX / scale + centerView['x'] - mouseX / ( scale * zoom ) ),
+        -( mouseY / scale + centerView['y'] - mouseY / ( scale * zoom ) )
+    );
+    centerView['x'] = ( mouseX / scale + centerView['x'] - mouseX / ( scale * zoom ) );
+    centerView['y'] = ( mouseY / scale + centerView['y'] - mouseY / ( scale * zoom ) );
+    scale *= zoom;
+}*/
+
 let earth = new Celestial_Object(
-    width/2, // centered position
-    height/2,
+    centerView['x'],
+    centerView['y'],
     6.1 * Math.pow(10, 25), // kilograms
-    34, // 1/100 kilometres
+    24, // 1/100 kilometres
     null,
     null,
-    color2
+    color2,
+    100,
+    100,
 );
 let moon = new Celestial_Object(
     width/2,
-    (height/2)+384.4,  // 1/1000 kilometres
+    (height/2)-384.4,  // 1/1000 kilometres
     7.3 * Math.pow(10, 23),
-    17,
+    7,
     3.2,
-    180,
-    color4
+    0,
+    color4,
+    10
 );
 let rocks = [];
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 10000; i++) {
+    let size = Math.random();
     let rock = new Celestial_Object(
-        randomInt(width),
-        randomInt(height),
+        randomInt(width+840)-420,
+        randomInt(height+840)-420,
         6.9 * Math.pow(10, 12),
-        Math.random()+2,
+        size,
         Math.random()+3,
-        null
+        null,
+        null,
+        size
     );
     if (
-        !rock.detectCollision(earth, 100) &&
-        rock.detectCollision(earth, 400)
+        rock.detectCollision(earth, 2000)
     ) {
         rocks.push(rock);
     } else {
@@ -55,25 +115,11 @@ for (let rock of rocks) {
     rock.draw(ctx);
 }
 
-for (let i = 0; i < 100; i++) {
-    for (let rock of rocks) {
-        rock.applyForces(earth);
-        rock.applyForces(moon);
-        rock.move();
-        if (rock.detectCollision(earth) || rock.detectCollision(moon)) {
-            rocks.splice(rocks.indexOf(rock), 1);
-        }
-
-        moon.applyForces(earth);
-        moon.move();
-    }
-}
-
 let frameRate = 1000 / 30;
 requestAnimationFrame(loop);
-
+// let count = 10000;
 function loop() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(originX,originY,width-(originX*2),height-(originY*2));
 
     moon.applyForces(earth);
     moon.move();
@@ -85,11 +131,30 @@ function loop() {
         rock.applyForces(earth);
         rock.applyForces(moon);
         rock.move();
-        if (rock.detectCollision(earth) || rock.detectCollision(moon)) {
+        if (rock.detectCollision(earth)) {
+            earth.resources += rock.resources;
             rocks.splice(rocks.indexOf(rock), 1);
+            // console.log('earth resources : ' + earth.resources);
+        }
+        if (rock.detectCollision(moon)) {
+            moon.resources += rock.resources;
+            rocks.splice(rocks.indexOf(rock), 1);
+            // console.log('moon resources : ' + moon.resources);
         }
         rock.draw(ctx);
+        /*if (
+            rock.posX > 0 && rock.posX < width &&
+            rock.posY > 0 && rock.posY < height
+        ) {
+            rock.draw(ctx);
+        }*/
     }
+
+    /*if (rocks.length < count) {
+        count = rocks.length;
+        console.log(count);
+    }*/
+    moon.track(ctx, centerView);
 
     setTimeout(function () {
         requestAnimationFrame(loop);

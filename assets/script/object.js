@@ -1,10 +1,11 @@
 console.log('object.js');
+let airColor = 'rgb(112, 159, 176)';
 
 class Celestial_Object {
     constructor(
         posX, posY, mass, radius,
         acceleration = null, direction = null,
-        color = null
+        color = null, resources = null, atmosphere = null
     ) {
         this.posX = posX; // 1px = 1 000 kilometers
         this.posY = posY;
@@ -13,11 +14,23 @@ class Celestial_Object {
         this.inertia = acceleration; // m/s
         this.direction = direction; // degrees
         this.color = color;
+        this.resources = resources;
+        this.atmosphere = atmosphere;
     }
-    draw(ctx) {
+    draw(ctx, atmosphere) {
         if (this.color === null) {
             let grey = randomInt(191) + 64;
             this.color = 'rgb(' + grey + ', ' + grey + ', ' + grey + ')';
+        }
+        if (this.atmosphere != null) {
+            ctx.fillStyle = airColor;
+            ctx.beginPath();
+            ctx.arc(
+                this.posX, this.posY,
+                this.radius + (this.atmosphere/1000),
+                0, 2 * Math.PI
+            );
+            ctx.fill();
         }
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -33,6 +46,12 @@ class Celestial_Object {
         }
         this.posX += this.inertia * Math.cos(this.direction * (Math.PI/180));
         this.posY += this.inertia * Math.sin(this.direction * (Math.PI/180));
+    }
+    track(ctx, positions) {
+        ctx.translate(
+            originX - this.posX,
+            originY - this.posX
+        );
     }
     calcDistance(posX, posY) {
         return Math.sqrt(
