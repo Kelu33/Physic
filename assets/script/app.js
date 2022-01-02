@@ -19,20 +19,28 @@ let centerView = {'x' : width/2, 'y' : height/2};
 let originX = -width, originY = -height;
 
 canvas.addEventListener('click', function(e) {
-    originX -= e.clientX;
-    originY -= e.clientY;
-    ctx.translate(
-        centerView['x'] - e.clientX,
-        centerView['y'] - e.clientY
-    );
+    center(e.clientX, e.clientY);
 })
 
+function center(posX, posY) {
+    originX -= posX;
+    originY -= posY;
+    ctx.translate(
+        centerView['x'] - posX,
+        centerView['y'] - posY
+    );
+}
+
 canvas.addEventListener('mousewheel', function(e) {
-    if (e['deltaY'] === -100) {
-        console.log('zoom in');
+    if (e.deltaY === - 100) {
+        ctx.translate(centerView['x'], centerView['y']);
+        ctx.scale(1.1, 1.1);
+        ctx.translate(-centerView['x'], -centerView['y']);
     }
-    if (e['deltaY'] === 100) {
-        console.log('zoom out');
+    if (e.deltaY === 100) {
+        ctx.translate(centerView['x'], centerView['y']);
+        ctx.scale(0.9, 0.9);
+        ctx.translate(-centerView['x'], -centerView['y']);
     }
 })
 
@@ -103,7 +111,8 @@ for (let i = 0; i < 10000; i++) {
         size
     );
     if (
-        rock.detectCollision(earth, 2000)
+        //!rock.detectCollision(earth, 120) &&
+        rock.detectCollision(earth, width*0.80)
     ) {
         rocks.push(rock);
     } else {
@@ -154,7 +163,6 @@ function loop() {
         count = rocks.length;
         console.log(count);
     }*/
-    moon.track(ctx, centerView);
 
     setTimeout(function () {
         requestAnimationFrame(loop);

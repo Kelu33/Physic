@@ -47,12 +47,6 @@ class Celestial_Object {
         this.posX += this.inertia * Math.cos(this.direction * (Math.PI/180));
         this.posY += this.inertia * Math.sin(this.direction * (Math.PI/180));
     }
-    track(ctx, positions) {
-        ctx.translate(
-            originX - this.posX,
-            originY - this.posX
-        );
-    }
     calcDistance(posX, posY) {
         return Math.sqrt(
             Math.pow(posX - this.posX, 2) +
