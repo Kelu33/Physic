@@ -7,78 +7,102 @@ let color3 = 'rgb(112, 159, 176)';
 let color4 = 'rgb(167, 197, 235)';
 
 const canvas = document.querySelector('canvas');
-let width = window.innerWidth;
-let height = window.innerHeight;
-canvas.width = width;
-canvas.height = height;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 let ctx = canvas.getContext('2d');
 
-let scale = 1;
-let currentZoom = 1;
-let centerView = {'x' : width/2, 'y' : height/2};
-let originX = -width, originY = -height;
+let centerX = canvas.width/2;
+let centerY = canvas.height/2;
 
-canvas.addEventListener('click', function(e) {
-    center(e.clientX, e.clientY);
-})
+let scaleFactor = 1.1;
+let currentZoom = 0;
+let factor = 0;
+let delta = 0;
+let tracking;
 
-function center(posX, posY) {
-    originX -= posX;
-    originY -= posY;
-    ctx.translate(
-        centerView['x'] - posX,
-        centerView['y'] - posY
-    );
+function zoom(clicks) {
+    ctx.translate(centerX, centerY);
+    factor = Math.pow(scaleFactor, clicks);
+    ctx.scale(factor,factor);
+    ctx.translate(-centerX, -centerY);
 }
+function trackingView(object) {
+    tracking = true;
+    ctx.translate(- object.posX + centerX, - object.posY + centerY);
+    centerX += (object.posX - centerX);
+    centerY += (object.posY - centerY);
+}
+canvas.addEventListener('mousewheel', function (e) {
+    delta = -e.deltaY ? -e.deltaY/40 : e.detail ? -e.detail : 0;
+    if (delta) {
+        if (delta < 0 && currentZoom >= -5) {
+            zoom(delta);
+            currentZoom--;
+        }
+        if (delta > 0  && currentZoom <= 50) {
+            zoom(delta);
+            currentZoom++;
+        }
+    }
+    return e.preventDefault() && false;
+});
+let lastX, lastY;
+let drag;
+let firstClick;
+canvas.addEventListener('mousedown', function (e) {
+    if (!tracking) drag = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
 
-canvas.addEventListener('mousewheel', function(e) {
-    if (e.deltaY === - 100) {
-        ctx.translate(centerView['x'], centerView['y']);
-        ctx.scale(1.1, 1.1);
-        ctx.translate(-centerView['x'], -centerView['y']);
-    }
-    if (e.deltaY === 100) {
-        ctx.translate(centerView['x'], centerView['y']);
-        ctx.scale(0.9, 0.9);
-        ctx.translate(-centerView['x'], -centerView['y']);
-    }
-})
+    if (firstClick) {
+        if (!tracking) {
+            trackingView(moon);
+        } else tracking = false;
 
-/*canvas.onmousewheel = function (event) {
-    let wheel = event.wheelDelta/120;//n or -n
-    let zoom = 0;
-    if(wheel < 0)
-    {
-        zoom = 1/2;
-        if(currentZoom == 1)
-            return;
+        /*ctx.translate(centerX - e.clientX, centerY - e.clientY);
+
+        draw(ctx);*/
     }
-    else
-    {
-        mouseX = event.clientX - canvas.offsetLeft;
-        mouseY = event.clientY - canvas.offsetTop;
-        zoom = 2;
-        if(currentZoom == 32)
-            return;
+    firstClick = true;
+    setTimeout(function () {
+        firstClick = false;
+    },350);
+});
+
+canvas.addEventListener('mousemove', function (e) {
+    if (drag) {
+        let newX = e.clientX - lastX;
+        let newY = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+
+        if (currentZoom > 0) {
+            if (factor < 1) factor = 1 / factor;
+            newY /= (Math.pow(factor, currentZoom));
+            newX /= (Math.pow(factor, currentZoom));
+        }
+        if (currentZoom < 0) {
+            if (factor > 1) factor = 1 / factor;
+            newY /= (Math.pow(factor, -currentZoom));
+            newX /= (Math.pow(factor, -currentZoom));
+        }
+
+        ctx.translate(newX, newY);
+
+        centerX -= newX;
+        centerY -= newY;
+
+        // draw(ctx);
     }
-    currentZoom *= zoom;
-    ctx.translate(
-        centerView['x'],
-        centerView['y']
-    );
-    ctx.scale(zoom,zoom);
-    ctx.translate(
-        -( mouseX / scale + centerView['x'] - mouseX / ( scale * zoom ) ),
-        -( mouseY / scale + centerView['y'] - mouseY / ( scale * zoom ) )
-    );
-    centerView['x'] = ( mouseX / scale + centerView['x'] - mouseX / ( scale * zoom ) );
-    centerView['y'] = ( mouseY / scale + centerView['y'] - mouseY / ( scale * zoom ) );
-    scale *= zoom;
-}*/
+});
+canvas.addEventListener('mouseup', function () {
+    if (drag) drag = false;
+});
 
 let earth = new Celestial_Object(
-    centerView['x'],
-    centerView['y'],
+    centerX,
+    centerY,
     6.1 * Math.pow(10, 25), // kilograms
     24, // 1/100 kilometres
     null,
@@ -88,8 +112,8 @@ let earth = new Celestial_Object(
     100,
 );
 let moon = new Celestial_Object(
-    width/2,
-    (height/2)-384.4,  // 1/1000 kilometres
+    centerX,
+    centerY-384.4,  // 1/1000 kilometres
     7.3 * Math.pow(10, 23),
     7,
     3.2,
@@ -101,8 +125,8 @@ let rocks = [];
 for (let i = 0; i < 10000; i++) {
     let size = Math.random();
     let rock = new Celestial_Object(
-        randomInt(width+840)-420,
-        randomInt(height+840)-420,
+        randomInt(canvas.width+840)-420,
+        randomInt(canvas.height+840)-420,
         6.9 * Math.pow(10, 12),
         size,
         Math.random()+3,
@@ -112,7 +136,7 @@ for (let i = 0; i < 10000; i++) {
     );
     if (
         //!rock.detectCollision(earth, 120) &&
-        rock.detectCollision(earth, width*0.80)
+        rock.detectCollision(earth, canvas.width*0.80)
     ) {
         rocks.push(rock);
     } else {
@@ -126,12 +150,16 @@ for (let rock of rocks) {
 
 let frameRate = 1000 / 30;
 requestAnimationFrame(loop);
-// let count = 10000;
+
 function loop() {
-    ctx.clearRect(originX,originY,width-(originX*2),height-(originY*2));
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.restore();
 
     moon.applyForces(earth);
     moon.move();
+    if (tracking) trackingView(moon);
 
     earth.draw(ctx);
     moon.draw(ctx);
@@ -143,26 +171,13 @@ function loop() {
         if (rock.detectCollision(earth)) {
             earth.resources += rock.resources;
             rocks.splice(rocks.indexOf(rock), 1);
-            // console.log('earth resources : ' + earth.resources);
         }
         if (rock.detectCollision(moon)) {
             moon.resources += rock.resources;
             rocks.splice(rocks.indexOf(rock), 1);
-            // console.log('moon resources : ' + moon.resources);
         }
         rock.draw(ctx);
-        /*if (
-            rock.posX > 0 && rock.posX < width &&
-            rock.posY > 0 && rock.posY < height
-        ) {
-            rock.draw(ctx);
-        }*/
     }
-
-    /*if (rocks.length < count) {
-        count = rocks.length;
-        console.log(count);
-    }*/
 
     setTimeout(function () {
         requestAnimationFrame(loop);
