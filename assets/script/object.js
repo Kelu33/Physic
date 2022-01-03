@@ -154,10 +154,11 @@ class Celestial_Object {
             this.radius, 0, 2 * Math.PI
         );
         ctx.fill();
+
         ctx.strokeStyle = 'rgb(0, 255, 0)';
         ctx.beginPath();
         ctx.moveTo(this.posX, this.posY);
-        ctx.lineTo(B['x'], B['y'],);
+        ctx.lineTo(B['x'], B['y']);
         ctx.stroke();
 
         ctx.strokeStyle = 'rgb(255, 0, 0)';

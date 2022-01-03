@@ -20,6 +20,8 @@ let currentZoom = 0;
 let factor = 0;
 let delta = 0;
 let tracking;
+let offsetX = 0;
+let offsetY = 0;
 
 function zoom(clicks) {
     ctx.translate(centerX, centerY);
@@ -29,9 +31,9 @@ function zoom(clicks) {
 }
 function trackingView(object) {
     tracking = true;
-    ctx.translate(- object.posX + centerX, - object.posY + centerY);
-    centerX += (object.posX - centerX);
-    centerY += (object.posY - centerY);
+    ctx.translate(- object.posX + centerX + offsetX, - object.posY + centerY + offsetY);
+    centerX += (object.posX - centerX - offsetX);
+    centerY += (object.posY - centerY - offsetY);
 }
 canvas.addEventListener('mousewheel', function (e) {
     delta = -e.deltaY ? -e.deltaY/40 : e.detail ? -e.detail : 0;
@@ -51,18 +53,22 @@ let lastX, lastY;
 let drag;
 let firstClick;
 canvas.addEventListener('mousedown', function (e) {
-    if (!tracking) drag = true;
+    drag = true;
     lastX = e.clientX;
     lastY = e.clientY;
 
     if (firstClick) {
+        offsetX = 0;
+        offsetY = 0;
         if (!tracking) {
-            trackingView(moon);
-        } else tracking = false;
-
-        /*ctx.translate(centerX - e.clientX, centerY - e.clientY);
-
-        draw(ctx);*/
+            trackingView(moon); // TODO fix unZoom
+        } else {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            currentZoom = 0;
+            centerX = canvas.width/2;
+            centerY = canvas.height/2;
+            tracking = false;
+        }
     }
     firstClick = true;
     setTimeout(function () {
@@ -90,10 +96,11 @@ canvas.addEventListener('mousemove', function (e) {
 
         ctx.translate(newX, newY);
 
+        offsetX += newX;
+        offsetY += newY;
+
         centerX -= newX;
         centerY -= newY;
-
-        // draw(ctx);
     }
 });
 canvas.addEventListener('mouseup', function () {
@@ -129,14 +136,14 @@ for (let i = 0; i < 10000; i++) {
         randomInt(canvas.height+840)-420,
         6.9 * Math.pow(10, 12),
         size,
-        Math.random()+3,
+        Math.random()+2.5,
         null,
         null,
         size
     );
     if (
         //!rock.detectCollision(earth, 120) &&
-        rock.detectCollision(earth, canvas.width*0.80)
+        rock.detectCollision(earth, centerX)
     ) {
         rocks.push(rock);
     } else {
@@ -148,7 +155,7 @@ for (let rock of rocks) {
     rock.draw(ctx);
 }
 
-let frameRate = 1000 / 30;
+let frameRate = 1000 / 60;
 requestAnimationFrame(loop);
 
 function loop() {
@@ -159,6 +166,7 @@ function loop() {
 
     moon.applyForces(earth);
     moon.move();
+
     if (tracking) trackingView(moon);
 
     earth.draw(ctx);
@@ -176,7 +184,9 @@ function loop() {
             moon.resources += rock.resources;
             rocks.splice(rocks.indexOf(rock), 1);
         }
-        rock.draw(ctx);
+        if (rock.detectCollision(earth, canvas.height * 2)) {
+            rock.draw(ctx);
+        }
     }
 
     setTimeout(function () {
